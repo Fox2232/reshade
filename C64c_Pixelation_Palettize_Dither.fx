@@ -56,10 +56,10 @@ namespace C64c_Pixelation_Palettize_Dither
         ui_min = 0.0f;
         ui_max = 1.0f;
         > = 0.5;
-	uniform float dithering_comparison <
+	uniform float palettize_comparison <
         ui_type = "slider";
-        ui_label = "Dithering Comparison";
-        ui_tooltip = "Dithering Comparison";
+        ui_label = "Palettize Comparison";
+        ui_tooltip = "Palettize Comparison";
         ui_category = "Pixelate";
         ui_min = 0.0f;
         ui_max = 1.0f;
@@ -311,19 +311,19 @@ namespace C64c_Pixelation_Palettize_Dither
     float4 PS_Dither(float4 pos : SV_Position, float2 texcoord : TEXCOORD) : SV_Target {
 	float2 uv = texcoord.xy;
 	float3 tc; float4 tcOut = float4(1, 0, 0.5, 1);
-	if (uv.x < (dithering_comparison-0.0002) && uv.y < (pixelation_comparison-0.0002)){
+	if (uv.x < (palettize_comparison-0.0002) && uv.y < (pixelation_comparison-0.0002)){
 		float dx = pixelation_x*BUFFER_RCP_WIDTH;
 		float dy = pixelation_y*BUFFER_RCP_HEIGHT;
 		float2 coord = float2(dx*floor(uv.x/dx+0.5), dy*floor(uv.y/dy+0.5));
 		tc = tex2D(samplerPix, coord).rgb;
 		tcOut = float4(ditherHsL(tc, coord), 1);
 	}
-	if (uv.x < (dithering_comparison-0.0002) && uv.y>=(pixelation_comparison+0.0002)){
+	if (uv.x < (palettize_comparison-0.0002) && uv.y>=(pixelation_comparison+0.0002)){
 		float2 coord = float2(floor(uv.x*BUFFER_WIDTH+0.5)*BUFFER_RCP_WIDTH, floor(uv.y*BUFFER_HEIGHT+0.5)*BUFFER_RCP_HEIGHT);
 		tc = tex2D(samplerPix, coord).rgb;
 		tcOut = float4(ditherHsL(tc, coord), 1.0);
 	}
-	else if (uv.x>=(dithering_comparison+0.0002)){
+	else if (uv.x>=(palettize_comparison+0.0002)){
 		tc = tex2D(samplerPix, texcoord.xy).rgb ;
 		tcOut = float4(tc, 1.0);
 	}
