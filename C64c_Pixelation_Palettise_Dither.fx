@@ -38,7 +38,7 @@ namespace C64c_Pixelation_Palettise_Dither
         ui_category = "Pixelate";
         ui_type = "slider";
         ui_min = 1;
-        ui_max = 16;
+        ui_max = 20; // 5 for 2x density on 1080p; 10 for 1080p; 20 for 2160p
         > = 5;
 	uniform int pixelation_y <
 		ui_label = "pixelation Y";
@@ -46,7 +46,7 @@ namespace C64c_Pixelation_Palettise_Dither
         ui_category = "Pixelate";
         ui_type = "slider";
         ui_min = 1;
-        ui_max = 16;
+        ui_max = 20; // 3 for 2x density on 1080p; 5 for 1080p; 10 for 2160p
         > = 3;
     uniform float pixelation_comparison <
         ui_type = "slider";
