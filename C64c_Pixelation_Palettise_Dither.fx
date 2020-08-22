@@ -304,10 +304,10 @@ namespace C64c_Pixelation_Palettise_Dither
 
 	float3 ditherHsL(float3 color, float2 texcoord : TEXCOORD) {
 		ret2xfloat3structHsL colorsRGB = closestColorsHsL(color); float3 closest[4];
-		closest[0] = colorsRGB.colorRGB1; float Eps = 1e-2;
-		closest[1] = colorsRGB.colorRGB2; float distances[6];
-		closest[2] = colorsRGB.colorRGB3; int4 closestSort;
-		closest[3] = colorsRGB.colorRGB4; float3 deltaCrgb;
+		closest[0] = colorsRGB.colorRGB1; float Eps = 1e-4;
+		closest[1] = colorsRGB.colorRGB2;
+		closest[2] = colorsRGB.colorRGB3;
+		closest[3] = colorsRGB.colorRGB4;
 		
 		float d = indexValue(texcoord, color);
 		if(dither_method==1){
