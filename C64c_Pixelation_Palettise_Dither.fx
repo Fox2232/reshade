@@ -80,6 +80,20 @@ namespace C64c_Pixelation_Palettise_Dither
 		ui_min = 1;
 		ui_max = 2;
 	> = 2;
+		uniform bool border <
+		ui_label = "Size to Border";
+		ui_tooltip = "Size to Border";
+		ui_category = "Border";
+	> = 0;
+	uniform int border_color <
+		ui_type = "slider";
+		ui_label = "Border Color";
+		ui_tooltip = "Border Color";
+		ui_category = "Border";
+		ui_min = 0;
+		ui_max = 15;
+	> = 10;
+
 	//// TEXTURES ///////////////////////////////////////////////////////////////////
 	texture2D texMipMe { Width = BUFFER_WIDTH; Height = BUFFER_HEIGHT; MipLevels = 8; };
 	texture texPixelized { Width = BUFFER_WIDTH; Height = BUFFER_HEIGHT;};
@@ -106,22 +120,23 @@ namespace C64c_Pixelation_Palettise_Dither
 	//Palette
 	float3 palette(int index){
 		float3 Palette[16] = {
-		float3(  0,   0,   0) / 255., // BLACK *		0
-		float3( 91,  91,  91) / 255., // Dark GREY *
-		float3(142, 142, 142) / 255., // Med GREY *		Gray Selection
-		float3(193, 193, 193) / 255.,  // LT GREY *
-		float3(255, 255, 255) / 255., // WHITE *		4
-		float3(200,  53,  53) / 255., // RED *+			5
-		float3( 89, 205,  54) / 255., // GREEN *+
-		float3( 65,  55, 205) / 255., // BLUE *+		RGB Selection
-		float3(249, 155, 151) / 255., // LT RED *+
-		float3(157, 255, 157) / 255., // LT GREEN *+
-		float3(117, 161, 236) / 255., // LT BLUE *+		10
-		float3(209, 127,  48) / 255., // ORANGE *+		11
-		float3(145,  95,  51) / 255., // BROWN *+
-		float3(115, 165, 181) / 255., // CYAN *+		Others
-		float3(204,  89, 189) / 255., // PURPLE *+
-		float3(247, 238,  89) / 255.  // YELLOW *+		15
+		float3(  0,   0,   0) / 255., // BLACK =		0
+		float3( 96,  96,  96) / 255., // Dark GREY *
+		float3(139, 139, 139) / 255., // Med GREY *		Gray Selection
+		float3(180, 181, 180) / 255.,  // LT GREY =
+		float3(255, 255, 255) / 255., // WHITE =		4
+		float3(156,  47,  43) / 255., // RED =a1/8		5
+		float3(103, 177,  78) / 255., // GREEN -5L
+		float3( 65,  45, 159) / 255., // BLUE -5L		RGB Selection
+		float3(189, 127, 119) / 255., // LT RED =a1/8
+		float3(148, 225, 120) / 255., // LT GREEN -10L
+		float3(135, 119, 218) / 255., // LT BLUE *+=	10
+		float3( 71, 175, 184) / 255., // CYAN -20L		11
+		float3(165,  58, 138) / 255., // PURPLE *+-		CMY Selection
+		float3(230, 232, 112) / 255., // YELLOW *+-		13
+		float3(158, 107,  50) / 255., // ORANGE =		14
+		float3(103,  75,  10) / 255.  // BROWN =a		15
+
 		};
 		return Palette[index];
 	}
@@ -163,17 +178,19 @@ namespace C64c_Pixelation_Palettise_Dither
 		int ix = 0; int iy = 0;
 		if(dither_level == 0){MatrixEdge = 1;MatrixSize = 1;};
 		if(dither_level == 1){MatrixEdge = 2;MatrixSize = 4;};
-		if(dither_level == 2){MatrixEdge = 4;MatrixSize = 16;};
+		if(dither_level == 2){MatrixEdge = 6;MatrixSize = 36;};
 		if(dither_level == 3){MatrixEdge = 8;MatrixSize = 64;};
 		if(dither_level == 4){MatrixEdge = 16;MatrixSize = 256;};
 		
 		int indexMatrix1[1] = { 0};
 		int indexMatrix4[4] = { 0, 2,
 								3, 1};
-		int indexMatrix16[16] = { 0, 8, 2, 10,
-								12, 4, 16, 6,
-								3, 11, 1, 9,
-								15, 7, 13, 8};
+		int indexMatrix36[36] = { 13, 22, 18, 27, 11, 20,
+								  31,  4, 36,  9, 29,  2,
+								  12, 21, 14, 23, 16, 25,
+								  30,  3,  5, 32, 34,  7,
+								  17, 26, 10, 19, 15, 24,
+								   8, 35, 28,  1,  6, 33};
 		int indexMatrix64[64] = {0,  32, 8,  40, 2,  34, 10, 42,
 								48, 16, 56, 24, 50, 18, 58, 26,
 								12, 44, 4,  36, 14, 46, 6,  38,
@@ -208,7 +225,7 @@ namespace C64c_Pixelation_Palettise_Dither
 		}
 		if(dither_level == 0){MatrxOut = indexMatrix1[ix + iy * MatrixEdge]  / MatrixSize;};
 		if(dither_level == 1){MatrxOut = indexMatrix4[ix + iy * MatrixEdge]  / MatrixSize;};
-		if(dither_level == 2){MatrxOut = indexMatrix16[ix + iy * MatrixEdge] / MatrixSize;};
+		if(dither_level == 2){MatrxOut = indexMatrix36[ix + iy * MatrixEdge] / MatrixSize;};
 		if(dither_level == 3){MatrxOut = indexMatrix64[ix + iy * MatrixEdge] / MatrixSize;};		
 		if(dither_level == 4){MatrxOut = indexMatrix256[ix + iy * MatrixEdge] / MatrixSize;};		
 		if(dither_level == 5) MatrxOut = frac(sin(dot(uv, float2(12.9898+c.x+c.z*0.5, 78.233+c.y+c.z*0.5))) * 43758.5453);
@@ -254,7 +271,7 @@ namespace C64c_Pixelation_Palettise_Dither
 			if(distances[i] < distances[candidateIndex[1]]){ candidateIndex[1] = i; candidateDist[1]=distances[i];candidateRGB[1]=palette(i);}
 		}
 		distances[candidateIndex[1]] += 100000;//got 2nd Candidate, removing it from pool
-		for (int i = 5; i < 16; ++i) {//get 3rd candidate => entire pool
+		for (int i = 5; i < 14; ++i) {//get 3rd candidate => entire pool
 			if(distances[i] < distances[candidateIndex[2]]){ candidateIndex[2] = i; candidateDist[2]=distances[i];candidateRGB[2]=palette(i);}
 		}
 		distances[candidateIndex[2]] += 100000;//got 3rd Candidate, removing it from pool
@@ -347,6 +364,11 @@ namespace C64c_Pixelation_Palettise_Dither
 
 	//// PIXEL SHADERS //////////////////////////////////////////////////////////////
 	float4 PS_MipMe(float4 pos : SV_Position, float2 texcoord : TEXCOORD) : SV_Target {
+		if(border==1){float x, y;
+			x = texcoord.x*1.25-0.125; y = texcoord.y*1.25-0.125;
+			float2 uv = float2(x,y);
+			return tex2D( ReShade::BackBuffer, uv );
+		}
 		return tex2D( ReShade::BackBuffer, texcoord );
 	}
 
@@ -369,6 +391,10 @@ namespace C64c_Pixelation_Palettise_Dither
 	float4 PS_Dither(float4 pos : SV_Position, float2 texcoord : TEXCOORD) : SV_Target {
 	float2 uv = texcoord.xy;
 	float3 tc; float4 tcOut = float4(1, 0, 0.5, 1);
+	if(border==1){float x, y;
+		x = texcoord.x*1.25-0.125; y = texcoord.y*1.25-0.125;
+		if(texcoord.x<0.1||texcoord.x>0.9||texcoord.y<0.1||texcoord.y>0.9){return float4(palette(border_color),1);}
+	}
 	if (uv.x < (palettise_comparison-0.0002) && uv.y < (pixelation_comparison-0.0002)){
 		float dx = pixelation_x*BUFFER_RCP_WIDTH;
 		float dy = pixelation_y*BUFFER_RCP_HEIGHT;
@@ -385,6 +411,7 @@ namespace C64c_Pixelation_Palettise_Dither
 		tc = tex2D(samplerPix, texcoord.xy).rgb ;
 		tcOut = float4(tc, 1.0);
 	}
+	
 	return tcOut;
 	}
 
