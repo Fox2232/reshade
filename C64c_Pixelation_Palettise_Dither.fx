@@ -97,10 +97,11 @@ namespace C64c_Pixelation_Palettise_Dither
 	//// TEXTURES ///////////////////////////////////////////////////////////////////
 	texture2D texMipMe { Width = BUFFER_WIDTH; Height = BUFFER_HEIGHT; MipLevels = 8; };
 	texture texPixelized { Width = BUFFER_WIDTH; Height = BUFFER_HEIGHT;};
+	texture2D texPaletized { Width = BUFFER_WIDTH; Height = BUFFER_HEIGHT; MipLevels = 1;};
 	//// SAMPLERS ///////////////////////////////////////////////////////////////////
 	sampler samplerMipMe { Texture = texMipMe; MipFilter = POINT; MinFilter = Linear; MagFilter = Linear; };
 	sampler2D samplerPix { Texture = texPixelized; };
-	
+	sampler samplerPal { Texture = texPaletized; MipFilter = POINT; MinFilter = Linear; MagFilter = POINT; };
 	//// FUNCTIONS //////////////////////////////////////////////////////////////////
 
 	//GetHueInRadians
@@ -136,7 +137,6 @@ namespace C64c_Pixelation_Palettise_Dither
 		float3(230, 232, 112) / 255., // YELLOW *+-		13
 		float3(158, 107,  50) / 255., // ORANGE =		14
 		float3(103,  75,  10) / 255.  // BROWN =a		15
-
 		};
 		return Palette[index];
 	}
@@ -176,12 +176,6 @@ namespace C64c_Pixelation_Palettise_Dither
 	float indexValue(float2 texcoord : TEXCOORD, float3 c) {
 		int MatrixEdge = 4; float MatrixSize = 16; float MatrxOut; float2 uv = texcoord.xy;
 		int ix = 0; int iy = 0;
-		if(dither_level == 0){MatrixEdge = 1;MatrixSize = 1;};
-		if(dither_level == 1){MatrixEdge = 2;MatrixSize = 4;};
-		if(dither_level == 2){MatrixEdge = 6;MatrixSize = 36;};
-		if(dither_level == 3){MatrixEdge = 8;MatrixSize = 64;};
-		if(dither_level == 4){MatrixEdge = 16;MatrixSize = 256;};
-		
 		int indexMatrix1[1] = { 0};
 		int indexMatrix4[4] = { 0, 2,
 								3, 1};
@@ -216,18 +210,13 @@ namespace C64c_Pixelation_Palettise_Dither
 								  138, 74,186,122,134, 70,182,118,137, 73,185,121,133, 69,181,117,
 								   42,234, 26,218, 38,230, 22,214, 41,233, 25,217, 37,229, 21,213,
 								  170,106,154, 90,166,102,150, 86,169,105,153, 89,165,101,149, 85 };
-
 		ix = int(floor(texcoord.x * BUFFER_WIDTH) % MatrixEdge);
 		iy = int(floor(texcoord.y * BUFFER_HEIGHT) % MatrixEdge);
-		if (uv.y < (pixelation_comparison-0.0002)){
-			ix = int(floor(texcoord.x * BUFFER_WIDTH / pixelation_x) % MatrixEdge);
-			iy = int(floor(texcoord.y * BUFFER_HEIGHT / pixelation_y) % MatrixEdge);
-		}
-		if(dither_level == 0){MatrxOut = indexMatrix1[ix + iy * MatrixEdge]  / MatrixSize;};
-		if(dither_level == 1){MatrxOut = indexMatrix4[ix + iy * MatrixEdge]  / MatrixSize;};
-		if(dither_level == 2){MatrxOut = indexMatrix36[ix + iy * MatrixEdge] / MatrixSize;};
-		if(dither_level == 3){MatrxOut = indexMatrix64[ix + iy * MatrixEdge] / MatrixSize;};		
-		if(dither_level == 4){MatrxOut = indexMatrix256[ix + iy * MatrixEdge] / MatrixSize;};		
+		if(dither_level == 0){MatrixEdge =  1;MatrixSize =   1;MatrxOut =   indexMatrix1[ix + iy * MatrixEdge] / MatrixSize;};
+		if(dither_level == 1){MatrixEdge =  2;MatrixSize =   4;MatrxOut =   indexMatrix4[ix + iy * MatrixEdge] / MatrixSize;};
+		if(dither_level == 2){MatrixEdge =  6;MatrixSize =  36;MatrxOut =  indexMatrix36[ix + iy * MatrixEdge] / MatrixSize;};
+		if(dither_level == 3){MatrixEdge =  8;MatrixSize =  64;MatrxOut =  indexMatrix64[ix + iy * MatrixEdge] / MatrixSize;};		
+		if(dither_level == 4){MatrixEdge = 16;MatrixSize = 256;MatrxOut = indexMatrix256[ix + iy * MatrixEdge] / MatrixSize;};		
 		if(dither_level == 5) MatrxOut = frac(sin(dot(uv, float2(12.9898+c.x+c.z*0.5, 78.233+c.y+c.z*0.5))) * 43758.5453);
 		return MatrxOut;
 	}
@@ -254,30 +243,23 @@ namespace C64c_Pixelation_Palettise_Dither
 		return dist;
 	}
 
-	struct ret2xfloat3structHsL {float3 colorRGB1, colorRGB2, colorRGB3, colorRGB4;};
-	ret2xfloat3structHsL closestColorsHsL(float3 RGB) {
+	struct ret2xfloat3structHsL {float3 colorHSL1, colorHSL2, colorHSL3, colorHSL4;};
+	ret2xfloat3structHsL closestColorsHsL(float3 HSL) {
 		float candidateDist[4]; int candidateIndex[4]; float3 candidateRGB[4];
 		candidateIndex[0] = 0; candidateIndex[1] = 0; candidateIndex[2] = 10; candidateIndex[3] = 10;
-		int paletteSize = 16; float distances[16];
+		int paletteSize = 16; float distances[16]; float mindist;
 		for (int i = 0; i < 16; i++) {//get all distances from target pixel
-			distances[i] = HSLDistSpheric(RGBtoHSL(RGB), RGBtoHSL(palette(i)));
+			distances[i] = HSLDistSpheric(HSL, RGBtoHSL(palette(i)));
 		}
 		
-		for (int i = 0; i < 5; ++i) {//get 1st candidate => color neutral
-			if(distances[i] < distances[candidateIndex[0]]){ candidateIndex[0] = i; candidateDist[0]=distances[i];candidateRGB[0]=palette(i);}
-		}
-		distances[candidateIndex[0]] += 100000;//got 1st Candidate, removing it from pool
-		for (int i = 5; i < 11; ++i) {//get 2nd candidate => entire pool
-			if(distances[i] < distances[candidateIndex[1]]){ candidateIndex[1] = i; candidateDist[1]=distances[i];candidateRGB[1]=palette(i);}
-		}
-		distances[candidateIndex[1]] += 100000;//got 2nd Candidate, removing it from pool
-		for (int i = 5; i < 14; ++i) {//get 3rd candidate => entire pool
-			if(distances[i] < distances[candidateIndex[2]]){ candidateIndex[2] = i; candidateDist[2]=distances[i];candidateRGB[2]=palette(i);}
-		}
-		distances[candidateIndex[2]] += 100000;//got 3rd Candidate, removing it from pool
-		for (int i = 0; i < 16; ++i) {//get 4th candidate => entire pool
-			if(distances[i] < distances[candidateIndex[3]]){ candidateIndex[3] = i; candidateDist[3]=distances[i];candidateRGB[3]=palette(i);}
-		} //got 4th Candidate, no further lookups
+		mindist = min(min(min(distances[0], distances[1]),min(distances[2], distances[3])),distances[4]);
+		for (int i = 0; i < 5; ++i){if(distances[i]==mindist){candidateIndex[0] = i; candidateDist[0]=distances[i];candidateRGB[0]=palette(i); distances[i] += 100000;};}
+		mindist = min(min(min(distances[5],distances[6]),min(distances[7],distances[8])),min(distances[9],distances[10]));
+		for (int i = 5; i < 11; ++i){if(distances[i]==mindist){candidateIndex[1] = i;candidateDist[1]=distances[i];candidateRGB[1]=palette(i); distances[i] += 100000;};}
+		mindist = min(min(min(distances[5],distances[6]),min(distances[7],distances[8])),min(min(distances[9],distances[10]),min(distances[11],min(distances[12],distances[13]))));
+		for (int i = 5; i < 14; ++i){if(distances[i]==mindist){candidateIndex[2] = i;candidateDist[2]=distances[i];candidateRGB[2]=palette(i); distances[i] += 100000;};}
+		mindist = min(min(min(min(distances[0],distances[1]),min(distances[2],distances[3])),min(min(distances[4],distances[5]),min(distances[6],distances[7]))),min(min(min(distances[8],distances[9]),min(distances[10],distances[11])),min(min(distances[12],distances[13]),min(distances[14],distances[15]))));
+		for (int i = 0; i < 16; ++i){if(distances[i]==mindist){candidateIndex[3] = i;candidateDist[3]=distances[i];candidateRGB[3]=palette(i); distances[i] += 100000;};}
 
 		int distIndexC1 = 0; int distIndexC2 = 0; int distIndexC3 = 0; int distIndexC4 = 0;
 		//Sorting Candidates for output
@@ -298,40 +280,26 @@ namespace C64c_Pixelation_Palettise_Dither
 		}
 
 		ret2xfloat3structHsL ret2xfloat3HsL;
-		ret2xfloat3HsL.colorRGB1 = candidateRGB[distIndexC1];//Closest;
-		ret2xfloat3HsL.colorRGB2 = candidateRGB[distIndexC2];//2nd Closest;
-		ret2xfloat3HsL.colorRGB3 = candidateRGB[distIndexC3];//3rd Closest;
-		ret2xfloat3HsL.colorRGB4 = candidateRGB[distIndexC4];//3rd Closest;
+		ret2xfloat3HsL.colorHSL1 = RGBtoHSL(candidateRGB[distIndexC1]);//Closest;
+		ret2xfloat3HsL.colorHSL2 = RGBtoHSL(candidateRGB[distIndexC2]);//2nd Closest;
+		ret2xfloat3HsL.colorHSL3 = RGBtoHSL(candidateRGB[distIndexC3]);//3rd Closest;
+		ret2xfloat3HsL.colorHSL4 = RGBtoHSL(candidateRGB[distIndexC4]);//3rd Closest;
 		return ret2xfloat3HsL;
-	}
-	
-	int4 getClosestDist(float C0, float C1, float C2, float C3, float C4, float C5){
-		float distances[6];
-		distances[0]=C0; distances[1]=C1; distances[2]=C2;
-		distances[3]=C3; distances[4]=C4; distances[5]=C5; int smallestIndex[4]={0, 0, 0, 0};
-		for (int i = 0; i < 6; ++i) {if(distances[i] < distances[smallestIndex[0]]){ smallestIndex[0] = i;};}
-		distances[smallestIndex[0]] += 100000;//got smallest, removing it from pool
-		for (int i = 0; i < 6; ++i) {if(distances[i] < distances[smallestIndex[1]]){ smallestIndex[1] = i;};}
-		distances[smallestIndex[1]] += 100000;//got 2nd smallest, removing it from pool
-		for (int i = 0; i < 6; ++i) {if(distances[i] < distances[smallestIndex[2]]){ smallestIndex[2] = i;};}
-		distances[smallestIndex[2]] += 100000;//got 3rd smallest, removing it from pool
-		for (int i = 0; i < 6; ++i) {if(distances[i] < distances[smallestIndex[3]]){ smallestIndex[3] = i;};}//got 4th smallest
-		return int4(smallestIndex[0],smallestIndex[1],smallestIndex[2],smallestIndex[3]);
 	}
 
 	float3 ditherHsL(float3 color, float2 texcoord : TEXCOORD) {
-		ret2xfloat3structHsL colorsRGB = closestColorsHsL(color); float3 closest[4];
-		closest[0] = colorsRGB.colorRGB1; float Eps = 1e-4;
-		closest[1] = colorsRGB.colorRGB2;
-		closest[2] = colorsRGB.colorRGB3;
-		closest[3] = colorsRGB.colorRGB4;
+		ret2xfloat3structHsL colorsHSL = closestColorsHsL(color); float3 closest[4];
+		closest[0] = colorsHSL.colorHSL1; float Eps = 1e-4;
+		closest[1] = colorsHSL.colorHSL2;
+		closest[2] = colorsHSL.colorHSL3;
+		closest[3] = colorsHSL.colorHSL4;
 		
 		float d = indexValue(texcoord, color);
 		if(dither_method==1){
-			float delta1=HSLDistSpheric(RGBtoHSL(color), RGBtoHSL(closest[0]));
-			float delta2=HSLDistSpheric(RGBtoHSL(color), RGBtoHSL(closest[1]));
-			float delta3=HSLDistSpheric(RGBtoHSL(color), RGBtoHSL(closest[2]));
-			float delta4=HSLDistSpheric(RGBtoHSL(color), RGBtoHSL(closest[3]));
+			float delta1=HSLDistSpheric(color, closest[0]);
+			float delta2=HSLDistSpheric(color, closest[1]);
+			float delta3=HSLDistSpheric(color, closest[2]);
+			float delta4=HSLDistSpheric(color, closest[3]);
 			float sum = delta1+delta2+delta3+delta4; float a1=delta1/sum; float a2=delta2/sum; float a3=delta3/sum; float a4=delta4/sum;
 			float n1=a1==0?1000000:1/a1; float n2=a2==0?1000000:1/a2; float n3=a3==0?1000000:1/a3; float n4=a4==0?1000000:1/a4;
 			n1=pow(n1,2.83); n2=pow(n2,2.83); n3=pow(n3,2.83); n4=pow(n4,2.83); float nsum=n1+n2+n3+n4;
@@ -341,18 +309,18 @@ namespace C64c_Pixelation_Palettise_Dither
 
 		if(dither_method==2){
 			float f1,f2,f3,f4; float sum; float3 ref; float n1, n2, n3, n4;
-			float delta1=HSLDistSpheric(RGBtoHSL(color), RGBtoHSL(closest[0]))+Eps;
-			float delta2=HSLDistSpheric(RGBtoHSL(color), RGBtoHSL(closest[1]))/(1-min(HSLInversity(RGBtoHSL(closest[1]),RGBtoHSL(color),RGBtoHSL(closest[0])),1-abs(RGBtoHSL(closest[1]).z-RGBtoHSL(color).z))+Eps);
+			float delta1=HSLDistSpheric(color, closest[0])+Eps;
+			float delta2=HSLDistSpheric(color, closest[1])/(1-min(HSLInversity(closest[1], color, closest[0]),1-abs(closest[1].z-color.z))+Eps);
 			n1=1/delta1; n2=1/delta2;
 			sum = n1+n2;
 			f1=n1/sum; f2=n2/sum;
 			ref=closest[0]*f1+closest[1]*f2;
-			float delta3=HSLDistSpheric(RGBtoHSL(color), RGBtoHSL(closest[2]))/(1-min(HSLInversity(RGBtoHSL(closest[2]),RGBtoHSL(color),RGBtoHSL(ref)),1-abs(RGBtoHSL(closest[2]).z-RGBtoHSL(color).z))+Eps);
+			float delta3=HSLDistSpheric(color, closest[2])/(1-min(HSLInversity(closest[2], color, ref),1-abs(closest[2].z-color.z))+Eps);
 			n3=1/delta3;
 			sum = n1+n2+n3;
 			f1=n1/sum; f2=n2/sum; f3=n3/sum;
 			ref=closest[0]*f1+closest[1]*f2+closest[2]*f3;
-			float delta4=HSLDistSpheric(RGBtoHSL(color), RGBtoHSL(closest[3]))/(1-min(HSLInversity(RGBtoHSL(closest[3]),RGBtoHSL(color),RGBtoHSL(ref)),1-abs(RGBtoHSL(closest[3]).z-RGBtoHSL(color).z))+Eps);
+			float delta4=HSLDistSpheric(color, closest[3])/(1-min(HSLInversity(closest[3], color, ref),1-abs(closest[3].z-color.z))+Eps);
 			n4=1/delta4;
 			n1=pow(n1,2.45); n2=pow(n2,2.45); n3=pow(n3,2.45); n4=pow(n4,2.45);sum = n1+n2+n3+n4;
 			f1=n1/sum; f2=n2/sum; f3=n3/sum; f4=n4/sum;
@@ -373,15 +341,19 @@ namespace C64c_Pixelation_Palettise_Dither
 	}
 
 	float4 PS_Pixelize(float4 pos : SV_Position, float2 texcoord : TEXCOORD) : SV_Target {
-	float2 uv = texcoord.xy;
-	float3 tc;
-	if (uv.y < (pixelation_comparison-0.0002)){
+	float2 uv = texcoord.xy; float3 tc;
+	if(uv.x < (palettise_comparison/pixelation_x-0.0002) && uv.y < (pixelation_comparison/pixelation_y-0.0002)){
+		float2 coord = float2(uv.x*pixelation_x, uv.y*pixelation_y);
+		tc = tex2Dlod(samplerMipMe, float4(coord,0,0)).rgb;
+	}
+	
+	if(uv.x > (palettise_comparison-0.0002) && uv.y < (pixelation_comparison-0.0002)){
 		float dx = pixelation_x*BUFFER_RCP_WIDTH;
 		float dy = pixelation_y*BUFFER_RCP_HEIGHT;
 		float2 coord = float2(dx*floor(uv.x/dx+0.5), dy*floor(uv.y/dy+0.5));
 		tc = tex2Dlod(samplerMipMe, float4(coord,0,0)).rgb;
 	}
-	else if (uv.y>=(pixelation_comparison+0.0002)){
+	else if(uv.y>=(pixelation_comparison+0.0002)){
 		tc = tex2Dlod(samplerMipMe, float4(texcoord.xy,0,0)).rgb ;
 	}
 	return float4(tc, 1.0);
@@ -391,48 +363,61 @@ namespace C64c_Pixelation_Palettise_Dither
 	float4 PS_Dither(float4 pos : SV_Position, float2 texcoord : TEXCOORD) : SV_Target {
 	float2 uv = texcoord.xy;
 	float3 tc; float4 tcOut = float4(1, 0, 0.5, 1);
-	if(border==1){float x, y;
-		x = texcoord.x*1.25-0.125; y = texcoord.y*1.25-0.125;
-		if(texcoord.x<0.1||texcoord.x>0.9||texcoord.y<0.1||texcoord.y>0.9){return float4(palette(border_color),1);}
-	}
-	if (uv.x < (palettise_comparison-0.0002) && uv.y < (pixelation_comparison-0.0002)){
-		float dx = pixelation_x*BUFFER_RCP_WIDTH;
-		float dy = pixelation_y*BUFFER_RCP_HEIGHT;
-		float2 coord = float2(dx*floor(uv.x/dx+0.5), dy*floor(uv.y/dy+0.5));
-		tc = tex2D(samplerPix, coord).rgb;
-		tcOut = float4(ditherHsL(tc, coord), 1);
+
+	if (uv.x < (palettise_comparison/pixelation_x-0.0002) && uv.y < (pixelation_comparison/pixelation_y-0.0002)){
+		//float2 coord = ();
+		tc = tex2D(samplerPix, texcoord.xy).rgb;
+		tcOut = float4(HSLtoRGB(ditherHsL(RGBtoHSL(tc), texcoord.xy)), 1);
 	}
 	if (uv.x < (palettise_comparison-0.0002) && uv.y>=(pixelation_comparison+0.0002)){
 		float2 coord = float2(floor(uv.x*BUFFER_WIDTH+0.5)*BUFFER_RCP_WIDTH, floor(uv.y*BUFFER_HEIGHT+0.5)*BUFFER_RCP_HEIGHT);
 		tc = tex2D(samplerPix, coord).rgb;
-		tcOut = float4(ditherHsL(tc, coord), 1.0);
+		tcOut = float4(HSLtoRGB(ditherHsL(RGBtoHSL(tc), coord)), 1.0);
 	}
 	else if (uv.x>=(palettise_comparison+0.0002)){
 		tc = tex2D(samplerPix, texcoord.xy).rgb ;
 		tcOut = float4(tc, 1.0);
 	}
-	
 	return tcOut;
 	}
 
+	float4 PS_Recompose(float4 pos : SV_Position, float2 texcoord : TEXCOORD) : SV_Target {
+		float2 uv = texcoord.xy;
+		float3 tc; float4 tcOut = float4(1, 0, 0.5, 1);
+		if(border==1){float x, y;
+			x = texcoord.x*1.25-0.125; y = texcoord.y*1.25-0.125;
+			if(texcoord.x<0.1||texcoord.x>0.9||texcoord.y<0.1||texcoord.y>0.9){return float4(palette(border_color),1);}
+		}
+		if (uv.x < (palettise_comparison-0.0002) && uv.y<(pixelation_comparison+0.0002)){
+			float2 coord = float2((uv.x*BUFFER_WIDTH+0.5)/(pixelation_x*BUFFER_WIDTH), (uv.y*BUFFER_HEIGHT+0.5)/(pixelation_y*BUFFER_HEIGHT));
+			tc = tex2D(samplerPal, coord).rgb;
+			tcOut = float4(tc, 1.0);
+		}else{
+			tc = tex2D(samplerPal, texcoord.xy).rgb ;
+			tcOut = float4(tc, 1.0);
+		}
+		return tcOut;
+	}
 	//// TECHNIQUES /////////////////////////////////////////////////////////////////
 	technique C64c_Pixelation_Palettise_Dither {
-		pass C64c_pass0 // Mip Creation
-		{
+		pass C64c_pass0 { // Mip Creation
 			VertexShader   = PostProcessVS;
 			PixelShader    = PS_MipMe;
 				RenderTarget   = texMipMe;
 		}
-			pass C64c_pass1 // Pixelation
-		{
+		pass C64c_pass1 {// Pixelation
 			VertexShader   = PostProcessVS;
 			PixelShader    = PS_Pixelize;
 			RenderTarget   = texPixelized;
 		}
-		pass C64c_pass2 // Dithering
-		{
+		pass C64c_pass2 {// Dithering
 			VertexShader   = PostProcessVS;
 			PixelShader    = PS_Dither;
+			RenderTarget   = texPaletized;
+		}
+		pass C64c_pass3{
+			VertexShader   = PostProcessVS;
+			PixelShader    = PS_Recompose;
 		}
 	}
 }
