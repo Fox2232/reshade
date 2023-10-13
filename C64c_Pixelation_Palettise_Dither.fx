@@ -94,6 +94,7 @@ namespace C64c_Pixelation_Palettise_Dither
 		ui_max = 15;
 	> = 10;
 
+
 	//// TEXTURES ///////////////////////////////////////////////////////////////////
 	texture2D texMipMe { Width = BUFFER_WIDTH; Height = BUFFER_HEIGHT; MipLevels = 8; };
 	texture texPixelized { Width = BUFFER_WIDTH; Height = BUFFER_HEIGHT;};
@@ -117,40 +118,38 @@ namespace C64c_Pixelation_Palettise_Dither
 		return 0;
 	}
 	//Palette
-	float3 palette(int index){
-		float3 Palette[16] = {
-		float3(  0,   0,   0) / 255., // BLACK =		0
-		float3( 96,  96,  96) / 255., // Dark GREY *
-		float3(139, 139, 139) / 255., // Med GREY *		Gray Selection
-		float3(180, 181, 180) / 255.,  // LT GREY =
-		float3(255, 255, 255) / 255., // WHITE =		4
-		float3(156,  47,  43) / 255., // RED =a1/8		5
-		float3(103, 177,  78) / 255., // GREEN -5L
-		float3( 65,  45, 159) / 255., // BLUE -5L		RGB Selection
-		float3(189, 127, 119) / 255., // LT RED =a1/8
-		float3(148, 225, 120) / 255., // LT GREEN -10L
-		float3(135, 119, 218) / 255., // LT BLUE *+=	10
-		float3( 71, 175, 184) / 255., // CYAN -20L		11
-		float3(165,  58, 138) / 255., // PURPLE *+-		CMY Selection
-		float3(230, 232, 112) / 255., // YELLOW *+-		13
-		float3(158, 107,  50) / 255., // ORANGE =		14
-		float3(103,  75,  10) / 255.  // BROWN =a		15
+	float3 palette(int index){											//										cos(H)*S sin(H)*S
+		float3 Palette[16] = {											//			H	   S      L		//			x		y		z
+		float3(  0,   0,   0) / 255., // BLACK =		0				// HSL 0.0000, 0.000, 0.000		// POS  0.0000,  0.0000, -1.000
+		float3( 96,  96,  96) / 255., // Dark GREY *					// HSL 0.0000, 0.000, 0.376		// POS  0.0000,  0.0000, -0.248
+		float3(139, 139, 139) / 255., // Med GREY *		Gray Selection	// HSL 0.0000, 0.000, 0.545		// POS  0.0000,  0.0000,  0.090
+		float3(181, 181, 181) / 255.,  // LT GREY =						// HSL 0.0000, 0.000, 0.710		// POS  0.0000,  0.0000,  0.420
+		float3(255, 255, 255) / 255., // WHITE =		4				// HSL 0.0000, 0.000, 1.000		// POS  0.0000,  0.0000,  1.000
+		float3(156,  47,  43) / 255., // RED =a1/8		5				// HSL 0.0349, 0.568, 0.390		// POS  0.5677,  0.0198, -0.220
+		float3(103, 177,  78) / 255., // GREEN -5L						// HSL 1.8326, 0.388, 0.500		// POS -0.1004,  0.3748,  0.000
+		float3( 65,  45, 159) / 255., // BLUE -5L		RGB Selection	// HSL 4.3808, 0.559, 0.400		// POS -0.1820, -0.5285, -0.200
+		float3(189, 127, 119) / 255., // LT RED =a1/8					// HSL 0.1222, 0.347, 0.604		// POS  0.3444,  0.0423,  0.208
+		float3(148, 225, 120) / 255., // LT GREEN -10L					// HSL 1.8151, 0.636, 0.676		// POS -0.1538,  0.6171,  0.352
+		float3(135, 119, 218) / 255., // LT BLUE *+=	10				// HSL 4.3633, 0.572, 0.661		// POS -0.1956, -0.5375,  0.322
+		float3( 71, 175, 184) / 255., // CYAN -20L		11				// HSL 3.2289, 0.443, 0.500		// POS -0.4413, -0.0386,  0.000
+		float3(165,  58, 138) / 255., // PURPLE *+-		CMY Selection	// HSL 5.4978, 0.480, 0.437		// POS  0.3394, -0.3394, -0.126
+		float3(230, 232, 112) / 255., // YELLOW *+-		13				// HSL 1.0647, 0.723, 0.675		// POS  0.3505,  0.6324,  0.350
+		float3(158, 107,  50) / 255., // ORANGE =		14				// HSL 0.5585, 0.519, 0.408		// POS  0.4401,  0.3750, -0.184
+		float3(103,  75,  10) / 255.  // BROWN =a		15				// HSL 0.7330, 0.823, 0.222		// POS  0.6116,  0.5507, -0.556
 		};
 		return Palette[index];
 	}
 
 	float3 RGBtoHSL(in float3 RGB){//Hue in radians
-		float H, S, L = 0.5; float toRad = 1.0471975512;
+		float H, S, L = 0.0; float toRad = 1.0471975512;
 		float R = RGB.x; float G = RGB.y; float B = RGB.z;
 		float minC; float maxC; float Eps = 1e-10;
 		minC = min(min(R,G),B);
 		maxC = max(max(R,G),B);
 		float chroma =  maxC - minC;
 		H = getHue(RGB);
-		S = 2 * ( maxC - minC ) / ( 1 + abs(maxC - 0.5) + abs(minC - 0.5) );
 		L = (maxC+minC)/2;
-		S = maxC == 0 ? 0 : chroma / (1-abs(2*L-1));
-		if((L==0)||(L==1)){S = 0;}else{S = chroma/(1-abs(2*maxC-chroma-1));}
+		if((L==0)||(L==1)){S = 0;}else{S = chroma/(1-abs(2*L-1));}
 		return float3(H, S, L);
 	}
 
@@ -216,9 +215,9 @@ namespace C64c_Pixelation_Palettise_Dither
 	}
 
 	float HSLInversity(float3 HSL1, float3 HSL2, float3 HSLref){
-		float3 XYZ1 = float3(cos(HSL1.x)*HSL1.y, sin(HSL1.x)*HSL1.y, sin(2*HSL1.z-1));
-		float3 XYZ2 = float3(cos(HSL2.x)*HSL2.y, sin(HSL2.x)*HSL2.y, sin(2*HSL2.z-1));
-		float3 XYZr = float3(cos(HSLref.x)*HSLref.y, sin(HSLref.x)*HSLref.y, sin(2*HSLref.z-1));
+		float3 XYZ1 = float3(cos(HSL1.x)*HSL1.y, sin(HSL1.x)*HSL1.y, sin(3.14159265359*HSL1.z)); // sin(2*HSL1.z-1));
+		float3 XYZ2 = float3(cos(HSL2.x)*HSL2.y, sin(HSL2.x)*HSL2.y, sin(3.14159265359*HSL2.z)); // sin(2*HSL2.z-1));
+		float3 XYZr = float3(cos(HSLref.x)*HSLref.y, sin(HSLref.x)*HSLref.y, sin(3.14159265359*HSLref.z)); // sin(2*HSLref.z-1));
 		float3 XYZ1d = XYZ1 - XYZr; float3 XYZ2d = XYZ2 - XYZr;
 		float V1=sqrt(dot(XYZ1d, XYZ1d));//Get vec lengths and product
 		float V2=sqrt(dot(XYZ2d, XYZ2d));
@@ -228,54 +227,43 @@ namespace C64c_Pixelation_Palettise_Dither
 	}
 
 	float HSLDistSpheric(float3 HSL1, float3 HSL2){
-		float3 XYZ1 = float3(cos(HSL1.x)*HSL1.y, sin(HSL1.x)*HSL1.y, sin(2*HSL1.z-1));
-		float3 XYZ2 = float3(cos(HSL2.x)*HSL2.y, sin(HSL2.x)*HSL2.y, sin(2*HSL2.z-1));
-		float3 diff = XYZ1 - XYZ2;
-		float  dist = sqrt(dot(diff,diff));
+		float3 XYZ1 = float3(cos(HSL1.x)*HSL1.y*pow(HSL1.z,0.95), sin(HSL1.x)*HSL1.y*pow(HSL1.z,0.925), pow(HSL1.z,1.225)); // 400*sin(3.14159265359*HSL1.z-3.14159265359*0.5)); // sin(2*HSL1.z-1));
+		float3 XYZ2 = float3(cos(HSL2.x)*HSL2.y*pow(HSL2.z,0.95), sin(HSL2.x)*HSL2.y*pow(HSL2.z,0.925), pow(HSL2.z,1.225)); // 400*sin(3.14159265359*HSL2.z-3.14159265359*0.5)); // sin(2*HSL2.z-1));
+		float3 diff = XYZ1 - XYZ2; //diff.z = diff.z*fx_to_rad;
+		float  dist = dot(diff,diff);
 		return dist;
 	}
 
 	struct ret2xfloat3structHsL {float3 colorHSL1, colorHSL2, colorHSL3, colorHSL4;};
 	ret2xfloat3structHsL closestColorsHsL(float3 HSL) {
-		float candidateDist[4]; int candidateIndex[4]; float3 candidateRGB[4];
-		candidateIndex[0] = 0; candidateIndex[1] = 0; candidateIndex[2] = 10; candidateIndex[3] = 10;
-		int paletteSize = 16; float distances[16]; float mindist;
+		int paletteSize = 16; float distances[16]; float mindist = 100000;
 		for (int i = 0; i < 16; i++) {//get all distances from target pixel
 			distances[i] = HSLDistSpheric(HSL, RGBtoHSL(palette(i)));
 		}
-		
-		mindist = min(min(min(distances[0], distances[1]),min(distances[2], distances[3])),distances[4]);
-		for (int i = 0; i < 5; ++i){if(distances[i]==mindist){candidateIndex[0] = i; candidateDist[0]=distances[i];candidateRGB[0]=palette(i); distances[i] += 100000;break;};}
-		mindist = min(min(min(distances[5],distances[6]),min(distances[7],distances[8])),min(distances[9],distances[10]));
-		for (int i = 5; i < 11; ++i){if(distances[i]==mindist){candidateIndex[1] = i;candidateDist[1]=distances[i];candidateRGB[1]=palette(i); distances[i] += 100000;break;};}
-		mindist = min(min(min(distances[5],distances[6]),min(distances[7],distances[8])),min(min(distances[9],distances[10]),min(distances[11],min(distances[12],distances[13]))));
-		for (int i = 5; i < 14; ++i){if(distances[i]==mindist){candidateIndex[2] = i;candidateDist[2]=distances[i];candidateRGB[2]=palette(i); distances[i] += 100000;break;};}
-		mindist = min(min(min(min(distances[0],distances[1]),min(distances[2],distances[3])),min(min(distances[4],distances[5]),min(distances[6],distances[7]))),min(min(min(distances[8],distances[9]),min(distances[10],distances[11])),min(min(distances[12],distances[13]),min(distances[14],distances[15]))));
-		for (int i = 0; i < 16; ++i){if(distances[i]==mindist){candidateIndex[3] = i;candidateDist[3]=distances[i];candidateRGB[3]=palette(i); distances[i] += 100000;break;};}
 
 		int distIndexC1 = 0; int distIndexC2 = 0; int distIndexC3 = 0; int distIndexC4 = 0;
 		//Sorting Candidates for output
-		for (int i = 0; i < 4; i++) {
-			if(candidateDist[i] < candidateDist[distIndexC1]) distIndexC1 = i;
+		for (int i = 0; i < 16; i++) {
+			if(distances[i] <= mindist){ mindist = distances[i]; distIndexC1 = i;}
 		}
-		candidateDist[distIndexC1] += 100000;
-		for (int i = 0; i < 4; i++) {
-			if(candidateDist[i] < candidateDist[distIndexC2]) distIndexC2 = i;
+		distances[distIndexC1] += 100000; mindist = 100000;
+		for (int i = 0; i < 16; i++) {
+			if(distances[i] <= mindist){ mindist = distances[i]; distIndexC2 = i;}
 		}
-		candidateDist[distIndexC2] += 100000;
-		for (int i = 0; i < 4; i++) {
-			if(candidateDist[i] < candidateDist[distIndexC3]) distIndexC3 = i;
+		distances[distIndexC2] += 100000; mindist = 100000;
+		for (int i = 0; i < 16; i++) {
+			if(distances[i] <= mindist){ mindist = distances[i]; distIndexC3 = i;}
 		}
-		candidateDist[distIndexC3] += 100000;
-		for (int i = 0; i < 4; i++) {
-			if(candidateDist[i] < candidateDist[distIndexC4]) distIndexC4 = i;
+		distances[distIndexC3] += 100000; mindist = 100000;
+		for (int i = 0; i < 16; i++) {
+			if(distances[i] <= mindist){ mindist = distances[i]; distIndexC4 = i;}
 		}
 
 		ret2xfloat3structHsL ret2xfloat3HsL;
-		ret2xfloat3HsL.colorHSL1 = RGBtoHSL(candidateRGB[distIndexC1]);//Closest;
-		ret2xfloat3HsL.colorHSL2 = RGBtoHSL(candidateRGB[distIndexC2]);//2nd Closest;
-		ret2xfloat3HsL.colorHSL3 = RGBtoHSL(candidateRGB[distIndexC3]);//3rd Closest;
-		ret2xfloat3HsL.colorHSL4 = RGBtoHSL(candidateRGB[distIndexC4]);//3rd Closest;
+		ret2xfloat3HsL.colorHSL1 = RGBtoHSL(palette(distIndexC1));//Closest;
+		ret2xfloat3HsL.colorHSL2 = RGBtoHSL(palette(distIndexC2));//2nd Closest;
+		ret2xfloat3HsL.colorHSL3 = RGBtoHSL(palette(distIndexC3));//3rd Closest;
+		ret2xfloat3HsL.colorHSL4 = RGBtoHSL(palette(distIndexC4));//4th Closest;
 		return ret2xfloat3HsL;
 	}
 
@@ -292,32 +280,33 @@ namespace C64c_Pixelation_Palettise_Dither
 			float delta2=HSLDistSpheric(color, closest[1]);
 			float delta3=HSLDistSpheric(color, closest[2]);
 			float delta4=HSLDistSpheric(color, closest[3]);
-			float sum = delta1+delta2+delta3+delta4; float a1=delta1/sum; float a2=delta2/sum; float a3=delta3/sum; float a4=delta4/sum;
-			float n1=a1==0?1000000:1/a1; float n2=a2==0?1000000:1/a2; float n3=a3==0?1000000:1/a3; float n4=a4==0?1000000:1/a4;
-			n1=pow(n1,2.83); n2=pow(n2,2.83); n3=pow(n3,2.83); n4=pow(n4,2.83); float nsum=n1+n2+n3+n4;
+			float n1=delta1==0?100000:1/delta1; float n2=delta2==0?1000000:1/delta2; float n3=delta3==0?1000000:1/delta3; float n4=delta4==0?1000000:1/delta4;
+			n1=pow(n1,0.95); n2=pow(n2,0.95); n3=pow(n3,0.95); n4=pow(n4,0.95); 
+			float nsum=n1+n2+n3+n4;
 			float f1=n1/nsum; float f2=n2/nsum; float f3=n3/nsum; float f4=n4/nsum;
 			return d <= f1 ? closest[0] : d <= f1+f2 ? closest[1] : d <= f1+f2+f3 ? closest[2] : closest[3];
 		}
 
 		if(dither_method==2){
 			float f1,f2,f3,f4; float sum; float3 ref; float n1, n2, n3, n4;
-			float delta1=HSLDistSpheric(color, closest[0])+Eps;
+			float delta1=HSLDistSpheric(color, closest[0]);
 			float delta2=HSLDistSpheric(color, closest[1])/(1-min(HSLInversity(closest[1], color, closest[0]),1-abs(closest[1].z-color.z))+Eps);
-			n1=1/delta1; n2=1/delta2;
+			n1=1/(delta1+Eps); n2=1/(delta2+Eps);
 			sum = n1+n2;
 			f1=n1/sum; f2=n2/sum;
-			ref=closest[0]*f1+closest[1]*f2;
+			ref=RGBtoHSL((HSLtoRGB(closest[0])*f1+HSLtoRGB(closest[1])*f2)*0.5);
 			float delta3=HSLDistSpheric(color, closest[2])/(1-min(HSLInversity(closest[2], color, ref),1-abs(closest[2].z-color.z))+Eps);
-			n3=1/delta3;
+			n3=1/(delta3+Eps);
 			sum = n1+n2+n3;
 			f1=n1/sum; f2=n2/sum; f3=n3/sum;
-			ref=closest[0]*f1+closest[1]*f2+closest[2]*f3;
+			ref=RGBtoHSL((HSLtoRGB(closest[0])*f1+HSLtoRGB(closest[1])*f2+HSLtoRGB(closest[2])*f3)*0.33333);
 			float delta4=HSLDistSpheric(color, closest[3])/(1-min(HSLInversity(closest[3], color, ref),1-abs(closest[3].z-color.z))+Eps);
-			n4=1/delta4;
-			n1=pow(n1,2.45); n2=pow(n2,2.45); n3=pow(n3,2.45); n4=pow(n4,2.45);sum = n1+n2+n3+n4;
+			n4=1/(delta4+Eps);
+			sum = n1+n2+n3+n4;
+			n1=pow(n1,0.9); n2=pow(n2,0.9); n3=pow(n3,0.9); n4=pow(n4,0.9);sum = n1+n2+n3+n4;
 			f1=n1/sum; f2=n2/sum; f3=n3/sum; f4=n4/sum;
-			ref=closest[0]*f1+closest[1]*f2+closest[2]*f3+closest[3]*f4;
 			return d <= f1 ? closest[0] : d <= f1+f2 ? closest[1] : d <= f1+f2+f3 ? closest[2] : closest[3];
+			
 		}
 		return float3(1,1,1);
 	}
@@ -357,7 +346,6 @@ namespace C64c_Pixelation_Palettise_Dither
 	float3 tc; float4 tcOut = float4(1, 0, 0.5, 1);
 
 	if (uv.x < (palettise_comparison/pixelation_x-0.0002) && uv.y < (pixelation_comparison/pixelation_y-0.0002)){
-		//float2 coord = ();
 		tc = tex2D(samplerPix, texcoord.xy).rgb;
 		tcOut = float4(HSLtoRGB(ditherHsL(RGBtoHSL(tc), texcoord.xy)), 1);
 	}
